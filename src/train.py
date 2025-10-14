@@ -6,6 +6,7 @@ import datetime
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import layers, models
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, TensorBoard
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 #==================================================================#
 
@@ -32,15 +33,39 @@ X_val = np.expand_dims(X_val, axis=-1)
 
 #==================================================================#
 
+datagen = ImageDataGenerator(
+    rotation_range=20,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    zoom_range=0.2,
+    horizontal_flip=True,
+    brightness_range=[0.7, 1.3],
+    shear_range=0.2,
+    fill_mode='nearest',
+)
+datagen.fit(X_train)
+
+#==================================================================#
+
 model = models.Sequential([
-    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 1)),
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(64, 64, 1), padding='same'),
+    layers.BatchNormalization(),
     layers.MaxPooling2D((2, 2)),
+    layers.Dropout(0.25),
+
     layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.BatchNormalization(),
     layers.MaxPooling2D((2, 2)),
-    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.Dropout(0.3),
+
+    layers.Conv2D(128, (3, 3), activation='relu'),
+    layers.BatchNormalization(),
     layers.MaxPooling2D((2, 2)),
+    layers.Dropout(0.35),
+
     layers.Flatten(),
-    layers.Dense(64, activation='relu'),
+    layers.Dense(128, activation='relu'),
+    layers.BatchNormalization(),
     layers.Dense(6, activation='softmax')
 ])
 
@@ -65,6 +90,15 @@ early_stopping = EarlyStopping(
     verbose=1
 )
 
+optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+    monitor='val_loss',
+    factor=0.2,
+    patience=2,
+    min_lr=1e-6,
+    verbose=1
+)
+
 log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 tensorboard_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
 
@@ -74,5 +108,5 @@ history = model.fit(
     X_train, y_train,
     epochs=20,
     validation_data=(X_val, y_val),
-    callbacks=[checkpoint, early_stopping, tensorboard_callback]
+    callbacks=[checkpoint, early_stopping, reduce_lr, tensorboard_callback]
 )
