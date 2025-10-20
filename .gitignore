@@ -5,3 +5,4 @@ lib64
 env
 tf-gpu
 resources/dataset/a*
+src/logs

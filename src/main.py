@@ -50,6 +50,10 @@ def detect_hand_mediapipe(frame):
     results = hands.process(rgb_frame)
 
     if results.multi_hand_landmarks:
+        return frame
+    return None
+
+    if results.multi_hand_landmarks:
         # On prend la première main détectée (car max_num_hands=1)
         hand_landmarks = results.multi_hand_landmarks[0]
 
