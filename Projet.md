@@ -15,3 +15,4 @@ Le but de ce TP est de développer une méthode permettant la reconnaisance de f
 ### Dataset
 
 Le premier dataset utiliser pour développer une première version du réseau de neuronnes sera issue du site Kaggle : [Figers](https://www.kaggle.com/datasets/koryakinp/fingers)
+[Sign-Language-Digits-Dataset](https://github.com/ardamavi/Sign-Language-Digits-Dataset)
