@@ -34,12 +34,16 @@ def build_model():
 def create_model():
     model = build_model()
     model.save('../resources/models/model.h5')
+    return model
     
 #==================================================================#
     
 def load_model():
     if os.path.exists('../resources/models/model.h5'):
         model = tf.keras.models.load_model('../resources/models/model.h5')
+        model.compile(optimizer='adam',
+                loss='sparse_categorical_crossentropy',
+                metrics=['accuracy'])
         return model
     else:
         return create_model()

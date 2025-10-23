@@ -4,7 +4,5 @@ lib
 lib64
 env
 tf-gpu
-resources/dataset/fingers
-resources/dataset/sign-language-digits-datasets-master
-resources/dataset/augmented_dataset
+resources/dataset
 src/logs

@@ -50,10 +50,6 @@ def detect_hand_mediapipe(frame):
     results = hands.process(rgb_frame)
 
     if results.multi_hand_landmarks:
-        return frame
-    return None
-
-    if results.multi_hand_landmarks:
         # On prend la première main détectée (car max_num_hands=1)
         hand_landmarks = results.multi_hand_landmarks[0]
 
@@ -67,11 +63,13 @@ def detect_hand_mediapipe(frame):
         y_min, y_max = min(y_coords), max(y_coords)
 
         # Ajouter une marge pour inclure toute la main
-        margin = 20
-        x_min = max(0, x_min - margin)
-        y_min = max(0, y_min - margin)
-        x_max = min(w, x_max + margin)
-        y_max = min(h, y_max + margin)
+        margin_percent = 0.2
+        margin_x = int((x_max - x_min) * margin_percent)
+        margin_y = int((y_max - y_min) * margin_percent)
+        x_min = max(0, x_min - margin_x)
+        y_min = max(0, y_min - margin_y)
+        x_max = min(w, x_max + margin_x)
+        y_max = min(h, y_max + margin_y)
 
         # Extraire la ROI
         hand_roi = frame[y_min:y_max, x_min:x_max]

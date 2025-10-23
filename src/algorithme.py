@@ -3,7 +3,6 @@ import math
 import numpy as np
 import tensorflow as tf
 import mediapipe as mp
-from model import model
 from collections import deque
 from create_model import load_model
 
@@ -151,6 +150,27 @@ def gettwtonepoints(frame, hands_detector=hands):
 
 #==================================================================#
 
+def count_finger_thumb(lm1, lm2, lm3, base_coords):
+    if lm1[0] > base_coords[0] & lm1[1] > base_coords[1]:
+        if lm2[0] > lm1[0] & lm2[1] > lm1[1]:
+            if lm3[0] > lm2[0] & lm3[1] > lm2[1]:
+                return 1
+    if lm1[0] > base_coords[0] & lm1[1] < base_coords[1]:
+        if lm2[0] > lm1[0] & lm2[1] < lm1[1]:
+            if lm3[0] > lm2[0] & lm3[1] < lm2[1]:
+                return 1
+    if lm1[0] < base_coords[0] & lm1[1] < base_coords[1]:
+        if lm2[0] < lm1[0] & lm2[1] < lm1[1]:
+            if lm3[0] < lm2[0] & lm3[1] < lm2[1]:
+                return 1
+    if lm1[0] < base_coords[0] & lm1[1] > base_coords[1]:
+        if lm2[0] < lm1[0] & lm2[1] > lm1[1]:
+            if lm3[0] < lm2[0] & lm3[1] > lm2[1]:
+                return 1
+    return 0
+
+#==================================================================#
+
 def count_finger(lm1, lm2, lm3, base_coords):
     distance1 = math.sqrt((lm1[0] - base_coords[0])**2 + (lm1[1] - base_coords[1])**2)
     distance2 = math.sqrt((lm2[0] - base_coords[0])**2 + (lm2[1] - base_coords[1])**2)
@@ -166,21 +186,25 @@ def count_fingers(landmarks):
     base_coords_x, base_coords_y, _ = landmarks[0]
     base_coords = (base_coords_x, base_coords_y)
     #20->18, 16->14, 12->10, 8->6, 4->2
-    i = 0
-    while i <= 16:
-        i = i + 2
+    lm1_x, lm1_y, _ = landmarks[2]
+    lm2_x, lm2_y, _ = landmarks[3]
+    lm3_x, lm3_y, _ = landmarks[4]
+    #counter += count_finger_thumb((lm1_x, lm1_y), (lm2_x, lm2_y), (lm3_x, lm3_y), base_coords)
+    i = -2
+    while i <= 14:
+        i = i + 4
         lm1_x, lm1_y, _ = landmarks[i]
         lm2_x, lm2_y, _ = landmarks[i+1]
         lm3_x, lm3_y, _ = landmarks[i+2]
         counter += count_finger((lm1_x, lm1_y), (lm2_x, lm2_y), (lm3_x, lm3_y), base_coords)
-        i = i +2
     return counter
 
 #==================================================================#
 
 target_size = (64, 64)
-train_buffer = deque(maxlen=32)
-batch_size = 8
+batch_size = 128
+sample_size = 32
+train_buffer = deque(maxlen=batch_size)
 iteration = 0
 cap = cv2.VideoCapture(0)
 model = load_model()
@@ -195,49 +219,54 @@ while True:
     hand_roi = detect_hand_mediapipe(show_frame)
     if hand_roi is not None:
         x_min, y_min, x_max, y_max = hand_roi
-        cv2.rectangle(show_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+        hand_roi = show_frame[y_min:y_max, x_min:x_max]
         
         points = gettwtonepoints(show_frame)
         counter = 0
         if points is not None:
             landmarks_px = points['landmarks_px']
             counter = count_fingers(landmarks_px)
-            print(f"Nombre de doigts levés : {counter}")
+            #print(f"Nombre de doigts levés : {counter}")
             for i, (x, y, z) in enumerate(landmarks_px):
                 if x_min < x < x_max and y_min < y < y_max:
                     cv2.circle(show_frame, (x, y), 5, (0, 255, 0), -1)
                     cv2.putText(show_frame, str(i), (x + 8, y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1, cv2.LINE_AA)
-        
-        hand_roi = show_frame[y_min:y_max, x_min:x_max]
-        hand_roi = cv2.cvtColor(hand_roi, cv2.COLOR_BGR2GRAY)
-        #hand_roi = cv2.resize(hand_roi, target_size)
-        hand_roi = cv2.resize(hand_roi, (h, w))     
-        
-        # Préparer image et ajouter au buffer
-        inp = preprocess_frame(frame)
+
+        inp = preprocess_frame(hand_roi)
         train_buffer.append((inp, counter))
+        print(len(train_buffer))
 
-        # Quand on atteint batch_size, entraînement
         if len(train_buffer) >= batch_size:
-            X_batch = np.vstack([x for x, _ in train_buffer])
-            y_batch = np.array([y for _, y in train_buffer])
-            history = model.fit(X_batch, y_batch, epochs=1, verbose=0)
-            train_buffer.clear()
-            iteration += 1
-            acc = history.history["accuracy"][-1]
-            print(f"[TRAIN] Iter {iteration}: acc={acc:.3f}")
+            batch_indices = np.random.choice(len(train_buffer), sample_size, replace=False)
+            batch = [train_buffer[i] for i in batch_indices]
+            X_batch = np.array([x.numpy().squeeze() for x, _ in batch])
+            X_batch = np.expand_dims(X_batch, -1)
+            y_batch = np.array([y for _, y in batch], dtype=np.float32)
 
-        # Prédiction du modèle actuel
-        pred = model.predict(preprocess_frame(frame), verbose=0)
+            print("X_batch shape:", X_batch.shape)
+            print("y_batch shape:", y_batch.shape)
+
+            history = model.fit(X_batch, y_batch, epochs=1, verbose=0)
+            for i in sorted(batch_indices, reverse=True):
+                del train_buffer[i]
+
+            iteration += 1
+            print(f"[TRAIN] Iter {iteration}")
+
+        pred = model.predict(inp, verbose=0)
         pred_label = int(np.argmax(pred))
-        cv2.putText(frame, f"IA : {pred_label}", (20, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,255), 2)
+
+        cv2.putText(hand_roi, f"Algo:{counter}", (20, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 2)
+        cv2.putText(hand_roi, f"IA:{pred_label}", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,255), 2)
+        
+        hand_roi = cv2.cvtColor(hand_roi, cv2.COLOR_BGR2GRAY)
+        hand_roi = cv2.resize(hand_roi, (h, w))   
 
     else:
         cv2.putText(frame, "Aucune main detectee", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
         hand_roi = frame
         
     cv2.imshow('Image', hand_roi)
-    #cv2.imshow('Reconnaissance', frame)
     
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
