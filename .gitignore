@@ -2,7 +2,10 @@ bin
 include
 lib
 lib64
+
+src/logs
+src/__pycache__
+resources/dataset
+
 env
 tf-gpu
-resources/dataset
-src/logs

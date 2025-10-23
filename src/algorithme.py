@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import mediapipe as mp
 from collections import deque
-from create_model import load_model
+from create_model import load_model, save_model
 
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # Pour éviter le spam des logs GPU
@@ -252,6 +252,10 @@ while True:
 
             iteration += 1
             print(f"[TRAIN] Iter {iteration}")
+            
+            if iteration % 5 == 0:  # par exemple, toutes les 5 itérations
+                save_model(model)
+                print("[SAVE] Modèle sauvegardé !")
 
         pred = model.predict(inp, verbose=0)
         pred_label = int(np.argmax(pred))
@@ -269,6 +273,8 @@ while True:
     cv2.imshow('Image', hand_roi)
     
     if cv2.waitKey(1) & 0xFF == ord('q'):
+        save_model(model)
+        print("[SAVE] Modèle sauvegardé !")
         break
 
 cap.release()

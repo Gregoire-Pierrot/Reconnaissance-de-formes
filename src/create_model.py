@@ -37,6 +37,11 @@ def create_model():
     return model
     
 #==================================================================#
+
+def save_model(model):
+    model.save('../resources/models/model.h5')
+
+#==================================================================#
     
 def load_model():
     if os.path.exists('../resources/models/model.h5'):
