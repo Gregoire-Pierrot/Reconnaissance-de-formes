@@ -95,6 +95,6 @@ def process_dataset(input_dir, output_dir):
 
 # ---------- Lancement ----------
 
-INPUT_DIR = "../resources/dataset/sign-language-digits-datasets-master/Dataset"
-OUTPUT_DIR = "../resources/dataset/augmented_dataset/"
+INPUT_DIR = "../../resources/dataset/sign-language-digits-datasets-master/Dataset"
+OUTPUT_DIR = "../../resources/dataset/augmented_dataset/"
 process_dataset(INPUT_DIR, OUTPUT_DIR)

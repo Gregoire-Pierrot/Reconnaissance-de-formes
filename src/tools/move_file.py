@@ -17,9 +17,9 @@ def organize_files(directory):
             else :
                 print(f"Chiffre non numérique : {fichier}, le fichier n'a pas été déplacé.")
                 
-organize_files("../resources/dataset/archive/test")
-organize_files("../resources/dataset/archive/train")
-organize_files("../resources/dataset/archive/fingers/test")
-organize_files("../resources/dataset/archive/fingers/train")
+organize_files("../../resources/dataset/archive/test")
+organize_files("../../resources/dataset/archive/train")
+organize_files("../../resources/dataset/archive/fingers/test")
+organize_files("../../resources/dataset/archive/fingers/train")
             
 print("Opération terminée.")
